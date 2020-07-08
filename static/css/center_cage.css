@@ -1,0 +1,73 @@
+.map_title_box{
+    height: 11%;
+    width: 100%;
+    top: 0px;
+    left: 0px;
+    background-color: rgba(17,25,69,0.54);
+    border-radius: 11px 11px 0px 0px;
+    position: relative;
+}
+.map_title_innerbox{
+    position: absolute;
+    top: -4px;
+    width: 100%;
+}
+.map_title{
+ width: 300px;
+  /*  background-image: url("../images/icons/first_title.png");*/
+    background-repeat: no-repeat;
+    margin:auto;
+    height: 28px;
+    text-align: center;
+    color: white;
+    font-size: 14px;
+    font-family: "Microsoft YaHei";
+    font-weight: bold;
+    background-color: #0D8BBD;
+    border-radius: 15px;
+    line-height:28px;
+}
+.map{
+    width: 100%;
+    height: 95%;
+    background-repeat: no-repeat;
+    background-position-x:-300px;
+    background-position-y:-200px;
+    border-radius: 0px 0px 8px 8px;
+    position: relative;
+    overflow: hidden;
+    cursor:move;
+}
+
+
+
+.map_tool_outbox{
+    width: 100%;
+    background-image: url("../images/icons/map_tool_bg.png");
+    height:50px;
+    cursor: auto;
+    background-repeat: repeat-x;
+    position: absolute;
+    bottom: 0px;
+    border-radius: 0px 0px 5px 5px;
+}
+.map_tool{
+    display: block;
+    width: 40px;
+    height: 100%;
+    margin-left: 8px;
+    cursor: pointer;
+    float: left;
+}
+.map_tool:hover{
+    background-image:url("../images/icons/map_tool_re.png");
+    background-repeat: repeat-x;
+}
+.map_tool_inner{
+    display: block;
+    width: 36px; height: 100%;
+    background-image: url("../images/icons/tool.png");
+    background-repeat: no-repeat;
+    margin-left: 2px;
+    background-position-y: 7px;
+}

@@ -1,0 +1,43 @@
+<div class="dataAllBorder01 cage_cl" style="margin-top: 3.5% !important; height: 62.7%; position: relative;">
+    <div class="dataAllBorder02" style="position: relative; overflow: hidden;">
+    <!--标题栏-->
+    <div class="map_title_box" style="height: 6%">
+      <div class="map_title_innerbox">
+          <div class="map_title">长江实时监测画面</div>
+      </div>
+    </div>
+
+    <div class="map" id="monitor">
+      <img src="/video_feed" alt="" width="100%" height="320">
+    </div>
+    <!--地图工具栏-->
+    <div class="map_tool_outbox">
+      <span class="map_tool">
+        <a class="map_tool_inner addition_check_btn check_btn" title="违规管理" style="background-position-x:-252px"></a>
+      </span>
+      <span class="map_tool">
+        <a class="map_tool_inner chemistry_check_btn check_btn" onClick="chemistryCheck()" title="吃水预警"
+          style="background-position-x:-288px"></a>
+      </span>
+      <span class="map_tool">
+        <a class="map_tool_inner enterprise_check_btn check_btn" onClick="enterpriseCheck()" title="避险预警"
+          style="background-position-x:-324px"></a>
+      </span>
+      <span class="map_tool">
+        <a class="map_tool_inner car_check_btn check_btn" onClick="carCheck()" title="偏航预警"
+          style="background-position-x:-360px"></a>
+      </span>
+      <span class="map_tool">
+        <a class="map_tool_inner" onClick="Search()" title="船舶检测" style="background-position-x:-468px"></a>
+      </span>
+      <span class="map_tool">
+        <a class="map_tool_inner" onClick="cancel()" id="fresh_tool" title="清空" style="background-position-x:-396px"></a>
+      </span>
+      <span class="map_tool">
+        <input type="text" id="txtCoord" style="width:150px;visibility:hidden" />
+     </span>
+    </div>
+    </div>
+</div>
+<div class="dataAllBorder01 cage_cl" style="margin-top: 0.6% !important; height: 32.1%;"></div>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/center_cage.css') }}">

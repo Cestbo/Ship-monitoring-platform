@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    {% block css %}
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-table.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    {% endblock %}
+</head>
+<body>
+    <div class="data_bodey">
+          <div class="index_nav">
+                <ul style="height: 30px; margin-bottom: 0px;"></ul>
+          </div>
+          <div class="index_tabs">
+                <div class="inner" style="height: 109%;">
+
+                      <div class="left_cage">
+                            {% include "left_cage.html" %}
+                      </div>
+
+                      <div class="center_cage">
+                            {% include "center_cage.html" %}
+                      </div>
+
+                      <div class="right_cage">
+                            {% include "right_cage.html" %}
+                      </div>
+
+                </div>
+          </div>
+    </div>
+
+
+    {% block js %}<!--js模块区域-->
+        <script src="{{ url_for('static', filename='js/jquery.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
+    {% endblock %}
+</body>
+</html>
