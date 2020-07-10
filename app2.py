@@ -3,8 +3,8 @@ import threading
 import cv2
 from detect_track import track
 import argparse
-from entity.model import FLowOfDay
-from util.dbutil import DatabaseManagement
+from entity.model import FLowOfDay, BoatRecord
+from util.dbutil import DatabaseManagement, objToDict
 from sqlalchemy import and_
 
 outputFrame = None
@@ -96,11 +96,9 @@ def get_flowofday():
     dbm.close()
     list = []
     for flow in flows:
-        list.append({
-            'id': flow.id,
-            'day': flow.day.strftime('%y-%m-%d'),
-            'flow': flow.flow
-        })
+        dict = objToDict(flow)
+        dict['day'] = dict['day'].strftime('%Y-%m-%d')
+        list.append(dict)
     ret = {
         'num': num,
         'flowdata': list
@@ -108,10 +106,34 @@ def get_flowofday():
     return jsonify(ret)
 
 
-@app.route("/get_shiptype")
-def get_shiptype():
-    shiptype = ['客货船', '普通货船', '集装箱船', '滚装船', '载驳货船', '散货船', '油船', '液化气体船', '兼用船', '其它']
-    return jsonify(shiptype)
+@app.route("/get_boatrecord", methods=['POST'])
+def get_boatrecord():
+    page = int(request.form.get("page"))
+    time_s = request.form.get("time_s")
+    time_e = request.form.get("time_e")
+    pagesize = 2
+    fliter = None
+    if time_s is not None and time_e is not None:
+        fliter = and_(BoatRecord.in_time >= time_s, BoatRecord.out_time <= time_e)
+    if time_s is not None and time_e is None:
+        fliter = and_(BoatRecord.in_time >= time_s)
+    if time_s is None and time_e is not None:
+        fliter = and_(BoatRecord.out_time <= time_e)
+    dbm = DatabaseManagement()
+    boatrecords = dbm.query_page(BoatRecord, page, pagesize, fliter)
+    num = dbm.count(BoatRecord, fliter)
+    dbm.close()
+    list = []
+    for boatrecord in boatrecords:
+        dict = objToDict(boatrecord)
+        dict['in_time'] = dict['in_time'].strftime('%Y-%m-%d %H:%M:%S')
+        dict['out_time'] = dict['out_time'].strftime('%Y-%m-%d %H:%M:%S')
+        list.append(dict)
+    ret = {
+        'num': num,
+        'boatrecords': list
+    }
+    return jsonify(ret)
 
 
 if __name__ == '__main__':

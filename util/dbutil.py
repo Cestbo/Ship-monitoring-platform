@@ -1,8 +1,19 @@
 # db_mg.py
 from sqlalchemy import create_engine, func, distinct, and_
 from sqlalchemy.orm import sessionmaker
-from entity.model import FLowOfDay
+from entity.model import FLowOfDay,BoatRecord
 from datetime import datetime
+import re
+
+
+# 将类转换成字典
+def objToDict(obj):
+    obj_dict = obj.__dict__
+    keys = obj_dict.keys()
+    for key in list(keys):
+        if re.match('_',key) is not None:
+            del obj_dict[key]
+    return obj_dict
 
 
 
@@ -45,14 +56,16 @@ class DatabaseManagement():
 
     def query_page(self,obj,page_index,page_size,fliter=None):
         if fliter is None:
-            return self.session.query(obj).order_by(FLowOfDay.id.desc()).\
+            return self.session.query(obj).order_by(obj.id.desc()).\
                 limit(page_size).offset((page_index - 1) * page_size).all()
         else:
             return self.session.query(obj).filter(fliter).\
-                order_by(FLowOfDay.id.desc()).limit(page_size).offset((page_index - 1) * page_size).all()
+                order_by(obj.id.desc()).limit(page_size).offset((page_index - 1) * page_size).all()
 
 
 if __name__=="__main__":
     dbm=DatabaseManagement()
-    ret =dbm.query_page(FLowOfDay,1,2,FLowOfDay.day>'2020-07-06')
+    boat_record = BoatRecord(1,datetime.now(), 1, 1,
+                             datetime.now(), 1, 1)
+    dbm.add_obj(boat_record)
     dbm.close()
