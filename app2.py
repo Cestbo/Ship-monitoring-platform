@@ -76,6 +76,21 @@ def get_counts():
     return jsonify(ret)
 
 
+@app.route('/get_shiptype')
+def get_shiptype():
+    shiptype = ["客货船",
+                "普通货船",
+                "集装箱船",
+                "滚装船",
+                "载驳货船",
+                "散货船",
+                "油船",
+                "液化气体船",
+                "兼用船",
+                "其它"]
+    return jsonify(shiptype)
+
+
 @app.route("/get_flowofday", methods=['POST'])
 def get_flowofday():
     page = int(request.form.get("page"))
