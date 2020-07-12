@@ -1,7 +1,7 @@
 # Ship-monitoring-platform
 
 ## 运行
-python app2.py -i 'video_path'  (default：videos/example_01.mp4)
+python app2.py -i video_path  (default：videos/example_01.mp4)
 
 ## 接口：
 
