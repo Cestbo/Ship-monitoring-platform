@@ -5,18 +5,23 @@
 
 ## 运行
 服务段运行：python app2.py
+
 多客服端运行：python client.py -s [server_ip] -a [area_name]
 (area_name默认分为四个区域：area1、area2、area3、area4)
 
 ## 接口：
 ### /change_area get
 切换到相应的区域进行检测追踪
+
 参数：area区域值（area1、area2、area3、area4）
 
 ### /video_feed get
 获取监控画面
+
 参数：rpiName区域名,可选五个值
+
 main:获取检测追踪画面
+
 area1：获取区域1视频画面，另三个区域类似
 
 
@@ -27,6 +32,7 @@ area1：获取区域1视频画面，另三个区域类似
 
 ### /get_flowofday post
 根据时间范围和页数查询历史每天统计量
+
 参数：page当前页   time_s开始时间（可空）   time_e结束时间（可空）
 
 返回：
