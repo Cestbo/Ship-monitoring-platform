@@ -1,12 +1,24 @@
 # Ship-monitoring-platform
+[TOC]
+## 更新内容
+实现多区域监控，支持切换摄像头进行跟踪检测
 
 ## 运行
-python app2.py -i video_path  (default：videos/example_01.mp4)
+服务段运行：python app2.py
+多客服端运行：python client.py -s [server_ip] -a [area_name]
+(area_name默认分为四个区域：area1、area2、area3、area4)
 
 ## 接口：
+### /change_area get
+切换到相应的区域进行检测追踪
+参数：area区域值（area1、area2、area3、area4）
 
-### /video_feed
+### /video_feed get
 获取监控画面
+参数：rpiName区域名,可选五个值
+main:获取检测追踪画面
+area1：获取区域1视频画面，另三个区域类似
+
 
 ### /get_counts  get
 获取当天实时船舶通行量

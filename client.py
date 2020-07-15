@@ -7,12 +7,12 @@ import imagezmq
 import argparse
 import socket
 import time
-import cv2
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-s", "--server-ip", required=False,
                 help="ip address of the server to which the client will connect",
                 default='tcp://127.0.0.1:5555')
+ap.add_argument("-a", "--area", required=False, default="area1")
 args = vars(ap.parse_args())
 
 # initialize the ImageSender object with the socket address of the
@@ -22,7 +22,7 @@ sender = imagezmq.ImageSender(connect_to="{}".format(
 
 # get the host name, initialize the video stream, and allow the
 # camera sensor to warmup
-rpiName = socket.gethostname()
+rpiName = args["area"]
 # vs = VideoStream(usePiCamera=True).start()
 vs = VideoStream(src=0).start()
 time.sleep(2.0)

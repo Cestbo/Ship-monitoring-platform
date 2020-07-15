@@ -1,49 +1,82 @@
-from flask import Flask, render_template, Response, jsonify, request
+from flask import Response, jsonify, request
+from app1 import app
 import threading
 import cv2
 from detect_track import track
 import argparse
-from entity.model import FLowOfDay, BoatRecord
-from util.dbutil import DatabaseManagement, objToDict
-from sqlalchemy import and_
+import imagezmq
 
 outputFrame = None
-lock = threading.Lock()
 counts = 0
+lock_outframe = threading.Lock()
 
-app = Flask(__name__)
-app.config['DEBUG'] = True
-app.config['JSON_AS_ASCII'] = False
+area = 'area1'
+lock_area = threading.Lock()
+
+outputFrameDict = {
+    "area1": None,
+    "area2": None,
+    "area3": None,
+    "area4": None
+}
+lock_dict = threading.Lock()
+
+# initialize the ImageHub object
+imageHub = imagezmq.ImageHub()
 
 
-def get_outframe(vs):
-    print("[INFO] 开始线程")
-    global outputFrame, lock, counts
+def get_srcframe():
+    print("[INFO] 开始线程:获取原视频")
+    global imageHub, outputFrameDict
     while True:
-        _, frame = vs.read()
+        (rpiName, frame) = imageHub.recv_image()
+        imageHub.send_reply(b'OK')
+        with lock_dict:
+            outputFrameDict[rpiName] = frame
+
+
+def get_outframe():
+    print("[INFO] 开始追踪线程")
+    global outputFrame, lock_outframe, counts, outputFrameDict, lock_dict, area, lock_area
+    while True:
+        with lock_dict, lock_area:
+            frame = outputFrameDict[area]
         if frame is None:
-            break
+            continue
         frame, new_counts = track(frame)
-        with lock:
+        with lock_outframe:
             outputFrame = frame.copy()
             counts = new_counts
 
 
-def generate():
+def outframe_gen():
+    global outputFrame, lock_outframe
+    while True:
+        with lock_outframe:
+            if outputFrame is None:
+                continue
+            (flag, encodeImage) = cv2.imencode(".jpg", outputFrame)
+            if not flag:
+                continue
+            yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' +
+                   bytearray(encodeImage) + b'\r\n')
+
+
+def generate(rpiName):
     # grab global reference to the output frame and lock variables
-    global outputFrame, lock
+    global outputFrameDict, lock_dict
 
     # loop over frames from the ouput stream
     while True:
         # wait until the lock is acquired
-        with lock:
+        with lock_dict:
             # check if the output frame is available, otherwise skip
             # the iteration of the loop
-            if outputFrame is None:
+            if outputFrameDict[rpiName] is None:
                 continue
 
             # encode the frame in JPEG format
-            (flag, encodeImage) = cv2.imencode(".jpg", outputFrame)
+            (flag, encodeImage) = cv2.imencode(".jpg", outputFrameDict[rpiName])
 
             # ensure the frame was successfully encoded
             if not flag:
@@ -54,17 +87,17 @@ def generate():
                bytearray(encodeImage) + b'\r\n')
 
 
-@app.route('/')
-def index():
-    return render_template("base.html")
-
-
 @app.route("/video_feed")
 def video_feed():
+    rpiName = request.args.get("rpiName")
     # return the response generated along with the specific media
     # type (mime type)
-    return Response(generate(),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
+    if rpiName == 'main':
+        return Response(outframe_gen(),
+                        mimetype='multipart/x-mixed-replace; boundary=frame')
+    else:
+        return Response(generate(rpiName),
+                        mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 @app.route('/get_counts')
@@ -76,93 +109,31 @@ def get_counts():
     return jsonify(ret)
 
 
-@app.route('/get_shiptype')
-def get_shiptype():
-    shiptype = ["客货船",
-                "普通货船",
-                "集装箱船",
-                "滚装船",
-                "载驳货船",
-                "散货船",
-                "油船",
-                "液化气体船",
-                "兼用船",
-                "其它"]
-    return jsonify(shiptype)
-
-
-@app.route("/get_flowofday", methods=['POST'])
-def get_flowofday():
-    page = int(request.form.get("page"))
-    time_s = request.form.get("time_s")
-    time_e = request.form.get("time_e")
-    pagesize = 2
-    fliter = None
-    if time_s is not None and time_e is not None:
-        fliter = and_(FLowOfDay.day >= time_s, FLowOfDay.day <= time_e)
-    if time_s is not None and time_e is None:
-        fliter = and_(FLowOfDay.day >= time_s)
-    if time_s is None and time_e is not None:
-        fliter = and_(FLowOfDay.day <= time_e)
-
-    dbm = DatabaseManagement()
-    flows = dbm.query_page(FLowOfDay, page, pagesize, fliter)
-    num = dbm.count(FLowOfDay, fliter)
-    dbm.close()
-    list = []
-    for flow in flows:
-        dict = objToDict(flow)
-        dict['day'] = dict['day'].strftime('%Y-%m-%d')
-        list.append(dict)
+@app.route('/change_area')
+def change_area():
+    global area
+    with lock_area:
+        area = request.args.get("area")
     ret = {
-        'num': num,
-        'flowdata': list
-    }
-    return jsonify(ret)
-
-
-@app.route("/get_boatrecord", methods=['POST'])
-def get_boatrecord():
-    page = int(request.form.get("page"))
-    time_s = request.form.get("time_s")
-    time_e = request.form.get("time_e")
-    pagesize = 2
-    fliter = None
-    if time_s is not None and time_e is not None:
-        fliter = and_(BoatRecord.in_time >= time_s, BoatRecord.out_time <= time_e)
-    if time_s is not None and time_e is None:
-        fliter = and_(BoatRecord.in_time >= time_s)
-    if time_s is None and time_e is not None:
-        fliter = and_(BoatRecord.out_time <= time_e)
-    dbm = DatabaseManagement()
-    boatrecords = dbm.query_page(BoatRecord, page, pagesize, fliter)
-    num = dbm.count(BoatRecord, fliter)
-    dbm.close()
-    list = []
-    for boatrecord in boatrecords:
-        dict = objToDict(boatrecord)
-        dict['in_time'] = dict['in_time'].strftime('%Y-%m-%d %H:%M:%S')
-        dict['out_time'] = dict['out_time'].strftime('%Y-%m-%d %H:%M:%S')
-        list.append(dict)
-    ret = {
-        'num': num,
-        'boatrecords': list
+        'msg': '切换区域成功'
     }
     return jsonify(ret)
 
 
 if __name__ == '__main__':
-    ap = argparse.ArgumentParser()
-    ap.add_argument("-i", "--input", type=str, default='videos/example_01.mp4',
-                    help="path to optional input video file")
-    args = vars(ap.parse_args())
-    print("[INFO] 获取视频源")
-    vs = cv2.VideoCapture(args['input'])
+    # ap = argparse.ArgumentParser()
+    # ap.add_argument("-i", "--input", type=str, default='videos/example_01.mp4',
+    #                 help="path to optional input video file")
+    # args = vars(ap.parse_args())
+    # print("[INFO] 获取视频源")
+    # vs = cv2.VideoCapture(args['input'])
 
     # start a thread that will perform motion detection
-    t = threading.Thread(target=get_outframe, args=(vs,))
-    t.daemon = True
-    t.start()
+    t1 = threading.Thread(target=get_srcframe)
+    t2 = threading.Thread(target=get_outframe)
+    for t in [t1, t2]:
+        t.daemon = True
+        t.start()
 
     # start the flask app
     print("[INFO] 开启flask")

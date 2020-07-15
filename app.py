@@ -79,7 +79,7 @@ def detect_frame(frame, net):
 def detect_stream():
     # grab global references to the video stream, output frame, and
     # lock variables
-    global imageHub, outputFrame, lock
+    global imageHub, outputFrame, lock_dict
     outputFrame = None
 
     # load our serialized model from disk
@@ -99,6 +99,7 @@ def detect_stream():
     # loop over frames from the video stream
     while True:
         (rpiName, frame) = imageHub.recv_image()
+        print("[INFO] have received date")
         imageHub.send_reply(b'OK')
         # if a device is not in the last active dictionary then it means
         # that its a newly connected device
