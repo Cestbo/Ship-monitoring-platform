@@ -30,6 +30,7 @@ class CentroidTracker:
         # distance we'll start to mark the object as "disappeared"
         self.maxDistance = maxDistance
 
+
     def register(self, centroid):  # centroid 质心坐标(x,y)
         # when registering an object we use the next available object
         # ID to store the centroid
@@ -42,12 +43,12 @@ class CentroidTracker:
         self.disappeared[self.nextObjectID] = 0
         self.nextObjectID += 1
 
-    def deregister(self, objectID):
+    def deregister(self, objectID, area):
         # before deregister save info
         info_dict = self.info[objectID]
         try:
             boat_record = BoatRecord(objectID, info_dict['in_time'], info_dict['in_x'], info_dict['in_y'],
-                                     datetime.now(), self.objects[objectID][0], self.objects[objectID][1])
+                                     datetime.now(), self.objects[objectID][0], self.objects[objectID][1], area=area)
             self.dbm.add_obj(boat_record)
         except Exception:
             print('[Error] 存在相同主键，无法存入数据库')
@@ -58,7 +59,7 @@ class CentroidTracker:
         del self.disappeared[objectID]
         del self.info[objectID]
 
-    def update(self, rects):
+    def update(self, rects, area):
         # check to see if the list of input bounding box rectangles
         # is empty
         if len(rects) == 0:
@@ -71,7 +72,7 @@ class CentroidTracker:
                 # frames where a given object has been marked as
                 # missing, deregister it
                 if self.disappeared[objectID] > self.maxDisappeared:
-                    self.deregister(objectID)
+                    self.deregister(objectID,area)
 
             # return early as there are no centroids or tracking info
             # to update
@@ -172,7 +173,7 @@ class CentroidTracker:
                     # frames the object has been marked "disappeared"
                     # for warrants deregistering the object
                     if self.disappeared[objectID] > self.maxDisappeared:
-                        self.deregister(objectID)
+                        self.deregister(objectID, area)
 
             # otherwise, if the number of input centroids is greater
             # than the number of existing object centroids we need to

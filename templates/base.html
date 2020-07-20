@@ -37,6 +37,11 @@
     {% block js %}<!--js模块区域-->
         <script src="{{ url_for('static', filename='js/jquery.js') }}"></script>
         <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
+        <script>
+            function changearea(area) {
+                $('#main_video').attr("src","/outVideo_feed?rpiName="+area)
+            }
+        </script>
     {% endblock %}
 </body>
 </html>

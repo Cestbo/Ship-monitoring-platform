@@ -9,6 +9,7 @@ from util.dbutil import DatabaseManagement
 from entity.model import FLowOfDay
 from datetime import datetime
 
+
 # 定义参数
 prototxt = 'models/mobilenetSSD/MobileNetSSD_deploy.prototxt'
 model = 'models/mobilenetSSD/MobileNetSSD_deploy.caffemodel'
@@ -26,23 +27,35 @@ print("[INFO] 加载网络")
 net = cv2.dnn.readNetFromCaffe(prototxt, model)
 W = None
 H = None
-ct = CentroidTracker(maxDisappeared=40, maxDistance=50)
 trackers = []
 trackableObjects = {}
-counts = 0
 totalFrames = 0
+ct_dict = {
+    "area1": CentroidTracker(maxDisappeared=40, maxDistance=50),
+    "area2": CentroidTracker(maxDisappeared=40, maxDistance=50),
+    "area3": CentroidTracker(maxDisappeared=40, maxDistance=50),
+    "area4": CentroidTracker(maxDisappeared=40, maxDistance=50),
+}
+# 保存各区域的船舶计数量
+counts_dict = {
+    "area1": 0,
+    "area2": 0,
+    "area3": 0,
+    "area4": 0
+}
 
 
-def track(frame):
-    global W, H, totalFrames, skip_frames, set_confidence, trackers, counts, CLASSES
-
+def track(frame, area):
+    global W, H, totalFrames, skip_frames, set_confidence, trackers, counts_dict, CLASSES
+    ct = ct_dict[area]
     # 0点清空计数
     t = time.strftime("%H:%M:%S")
-    if t == '00:00:00':
+    if t == '16:42:00':
         dbm = DatabaseManagement()
-        dbm.add_obj(FLowOfDay(datetime.now(),counts))
+        dbm.add_obj(FLowOfDay(datetime.now(), counts_dict[area], area))
         dbm.close()
-        counts = 0
+        for key in counts_dict.keys():
+            counts_dict[key] = 0
 
     frame = imutils.resize(frame, width=500)
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -117,7 +130,7 @@ def track(frame):
 
     # use the centroid tracker to associate the (1) old object
     # centroids with (2) the newly computed object centroids
-    objects = ct.update(rects)
+    objects = ct.update(rects, area)
 
     # loop over the tracked objects
     for (objectID, centroid) in objects.items():
@@ -136,7 +149,7 @@ def track(frame):
 
             # check to see if the object has been counted or not
             if not to.counted:
-                counts += 1
+                counts_dict[area] += 1
                 to.counted = True
 
         # store the trackable object in our dictionary
@@ -150,4 +163,4 @@ def track(frame):
         cv2.circle(frame, (centroid[0], centroid[1]), 4, (0, 255, 0), -1)
     totalFrames += 1
 
-    return frame, counts
+    return frame

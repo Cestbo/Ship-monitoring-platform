@@ -5,78 +5,73 @@ import cv2
 from detect_track import track
 import argparse
 import imagezmq
+from detect_track import counts_dict
 
-outputFrame = None
-counts = 0
-lock_outframe = threading.Lock()
+# 保存源视频帧
+srcFrameDict = {
+    "area1": None,
+    "area2": None,
+    "area3": None,
+    "area4": None
+}
+lock_srcFrame = threading.Lock()
 
-area = 'area1'
-lock_area = threading.Lock()
-
+# 保存检测后的视频帧
 outputFrameDict = {
     "area1": None,
     "area2": None,
     "area3": None,
     "area4": None
 }
-lock_dict = threading.Lock()
+lock_outputFrame = threading.Lock()
 
 # initialize the ImageHub object
 imageHub = imagezmq.ImageHub()
 
 
-def get_srcframe():
-    print("[INFO] 开始线程:获取原视频")
-    global imageHub, outputFrameDict
+def get_frame():
+    print("[INFO] 开始线程:获取原视频帧并进行检测")
+    global srcFrameDict, lock_srcFrame, outputFrameDict, lock_outputFrame
     while True:
         (rpiName, frame) = imageHub.recv_image()
         imageHub.send_reply(b'OK')
-        with lock_dict:
-            outputFrameDict[rpiName] = frame
+        # save src_frame
+        with lock_srcFrame:
+            srcFrameDict[rpiName] = frame
+        # detect and track
+        frame = track(frame, rpiName)
+        # save output_frame and counts
+        with lock_outputFrame:
+            outputFrameDict[rpiName] = frame.copy()
 
-
-def get_outframe():
-    print("[INFO] 开始追踪线程")
-    global outputFrame, lock_outframe, counts, outputFrameDict, lock_dict, area, lock_area
+def outFrame_gen(area):
+    global outputFrameDict, lock_outputFrame
     while True:
-        with lock_dict, lock_area:
-            frame = outputFrameDict[area]
-        if frame is None:
-            continue
-        frame, new_counts = track(frame)
-        with lock_outframe:
-            outputFrame = frame.copy()
-            counts = new_counts
-
-
-def outframe_gen():
-    global outputFrame, lock_outframe
-    while True:
-        with lock_outframe:
-            if outputFrame is None:
+        with lock_outputFrame:
+            if outputFrameDict[area] is None:
                 continue
-            (flag, encodeImage) = cv2.imencode(".jpg", outputFrame)
+            (flag, encodeImage) = cv2.imencode(".jpg", outputFrameDict[area])
             if not flag:
                 continue
             yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' +
                    bytearray(encodeImage) + b'\r\n')
 
 
-def generate(rpiName):
+def srcFrame_gen(rpiName):
     # grab global reference to the output frame and lock variables
-    global outputFrameDict, lock_dict
+    global srcFrameDict, lock_srcFrame
 
     # loop over frames from the ouput stream
     while True:
         # wait until the lock is acquired
-        with lock_dict:
+        with lock_srcFrame:
             # check if the output frame is available, otherwise skip
             # the iteration of the loop
-            if outputFrameDict[rpiName] is None:
+            if srcFrameDict[rpiName] is None:
                 continue
 
             # encode the frame in JPEG format
-            (flag, encodeImage) = cv2.imencode(".jpg", outputFrameDict[rpiName])
+            (flag, encodeImage) = cv2.imencode(".jpg", srcFrameDict[rpiName])
 
             # ensure the frame was successfully encoded
             if not flag:
@@ -87,37 +82,27 @@ def generate(rpiName):
                bytearray(encodeImage) + b'\r\n')
 
 
-@app.route("/video_feed")
-def video_feed():
+@app.route("/srcVideo_feed")
+def srcVideo_feed():
     rpiName = request.args.get("rpiName")
     # return the response generated along with the specific media
     # type (mime type)
-    if rpiName == 'main':
-        return Response(outframe_gen(),
-                        mimetype='multipart/x-mixed-replace; boundary=frame')
-    else:
-        return Response(generate(rpiName),
-                        mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(srcFrame_gen(rpiName),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
+
+
+@app.route("/outVideo_feed")
+def outVideo_feed():
+    rpiName = request.args.get("rpiName")
+    # return the response generated along with the specific media
+    # type (mime type)
+    return Response(outFrame_gen(rpiName),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 @app.route('/get_counts')
 def get_counts():
-    global counts
-    ret = {
-        'counts': counts,
-    }
-    return jsonify(ret)
-
-
-@app.route('/change_area')
-def change_area():
-    global area
-    with lock_area:
-        area = request.args.get("area")
-    ret = {
-        'msg': '切换区域成功'
-    }
-    return jsonify(ret)
+    return jsonify(counts_dict)
 
 
 if __name__ == '__main__':
@@ -128,12 +113,10 @@ if __name__ == '__main__':
     # print("[INFO] 获取视频源")
     # vs = cv2.VideoCapture(args['input'])
 
-    # start a thread that will perform motion detection
-    t1 = threading.Thread(target=get_srcframe)
-    t2 = threading.Thread(target=get_outframe)
-    for t in [t1, t2]:
-        t.daemon = True
-        t.start()
+    # start threads that will perform motion detection
+    t = threading.Thread(target=get_frame)
+    t.daemon = True
+    t.start()
 
     # start the flask app
     print("[INFO] 开启flask")

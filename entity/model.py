@@ -9,15 +9,18 @@ class FLowOfDay(Base):
     id = Column(INT(), primary_key=True)
     day = Column(Date())
     flow = Column(INT())
+    area = Column(String())
 
-    def __init__(self, day, flow):
+    def __init__(self, day, flow, area):
         self.day = day
         self.flow = flow
+        self.area = area
 
 
 class BoatRecord(Base):
     __tablename__ = 'boat_record'
-    id = Column(INT(), primary_key=True, autoincrement=False)
+    id = Column(INT(), primary_key=True, autoincrement=True)
+    no = Column(INT())
     in_time = Column(DateTime())
     in_x = Column(Float())
     in_y = Column(Float())
@@ -27,8 +30,8 @@ class BoatRecord(Base):
     type = Column(String())
     area = Column(String())
 
-    def __init__(self, id, in_time, in_x, in_y, out_time, out_x, out_y, type='船舶', area='区域一'):
-        self.id = id
+    def __init__(self, no, in_time, in_x, in_y, out_time, out_x, out_y, type='船舶', area='区域一'):
+        self.no = no
         self.in_time = in_time
         self.in_x = in_x
         self.in_y = in_y
