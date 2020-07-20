@@ -50,7 +50,7 @@ def track(frame, area):
     ct = ct_dict[area]
     # 0点清空计数
     t = time.strftime("%H:%M:%S")
-    if t == '16:42:00':
+    if t == '00:00:00':
         dbm = DatabaseManagement()
         dbm.add_obj(FLowOfDay(datetime.now(), counts_dict[area], area))
         dbm.close()
